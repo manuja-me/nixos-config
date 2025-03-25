@@ -105,8 +105,9 @@ if [ "$clone_repo" = true ]; then
     cd "$REPO_DIR"
     echo -e "${GREEN}✓${NC} Repository cloned to $REPO_DIR"
     
-    # Fix ownership of the cloned repository
-    chown -R $ACTUAL_USER:$ACTUAL_USER "$REPO_DIR"
+    # Fix ownership of the cloned repository using the users group instead of user's group
+    chown -R $ACTUAL_USER:users "$REPO_DIR"
+    echo -e "${GREEN}✓${NC} Repository ownership set to $ACTUAL_USER:users"
 fi
 
 # Ensure we're working with the right file paths
@@ -452,8 +453,11 @@ fi
 # Create the user if it doesn't exist
 if ! id "$username" &>/dev/null; then
     echo -e "${CYAN}Creating user $username...${NC}"
-    useradd -m -G wheel -s /run/current-system/sw/bin/zsh "$username"
+    useradd -m -G wheel,users -s /run/current-system/sw/bin/zsh "$username"
     passwd "$username"
+    
+    # Set proper ownership for the user's home directory
+    chown -R $username:users /home/$username
 fi
 
 # Run home-manager as the specified user
