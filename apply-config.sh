@@ -9,14 +9,6 @@ BLUE='\033[0;34m'
 CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
-# Check if running as root, if not, restart with sudo
-if [ "$EUID" -ne 0 ]; then
-  echo -e "${YELLOW}This script requires root privileges for some operations.${NC}"
-  echo "Restarting with sudo..."
-  exec sudo bash "$0" "$@"
-  exit $?
-fi
-
 # Print header
 echo -e "${BLUE}╔════════════════════════════════════════════════════════════╗${NC}"
 echo -e "${BLUE}║             ${CYAN}NixOS Configuration Setup Tool${BLUE}             ║${NC}"
@@ -43,6 +35,9 @@ if [ -n "$needed_pkgs" ]; then
     echo -e "${CYAN}Installing required packages:${NC}$needed_pkgs"
     nix-env -iA nixos.git nixos.gnused nixos.curl
 fi
+
+# Get the actual user who is running the script with sudo
+ACTUAL_USER=${SUDO_USER:-$(whoami)}
 
 # Backup original NixOS configuration
 echo -e "${CYAN}Backing up original NixOS configuration...${NC}"
@@ -71,7 +66,7 @@ else
 fi
 
 # Check if repository already exists
-REPO_DIR="/home/$SUDO_USER/nixos-config"
+REPO_DIR="/home/$ACTUAL_USER/nixos-config"
 if [ -d "$REPO_DIR" ]; then
     echo -e "${YELLOW}Repository already exists at $REPO_DIR${NC}"
     read -p "Would you like to use it? (Y/n): " use_existing
@@ -104,7 +99,7 @@ if [ "$clone_repo" = true ]; then
     echo -e "${GREEN}✓${NC} Repository cloned to $REPO_DIR"
     
     # Fix ownership of the cloned repository
-    chown -R $SUDO_USER:$SUDO_USER "$REPO_DIR"
+    chown -R $ACTUAL_USER:$ACTUAL_USER "$REPO_DIR"
 fi
 
 # Ensure we're working with the right file paths
