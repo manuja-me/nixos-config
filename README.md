@@ -132,6 +132,7 @@ This repository contains a modular NixOS configuration using flakes and Home Man
      nix.settings.experimental-features = [ "nix-command" "flakes" ];
      environment.systemPackages = with pkgs; [
        git
+       curl
      ];
    }
    ```
@@ -141,34 +142,57 @@ This repository contains a modular NixOS configuration using flakes and Home Man
    sudo nixos-rebuild switch
    ```
 
-2. **Clone this repository**:
+2. **Quick Installation with Curl (from TTY or terminal)**:
+
+   You can directly download and run the configuration script using curl:
+
+   ```bash
+   # Download and run the setup script
+   curl -sSL https://raw.githubusercontent.com/manuja-me/nixos-config/main/apply-config.sh | bash
+   ```
+
+   Or if you prefer to download the script first and then run it:
+
+   ```bash
+   # Download the script
+   curl -sSL -o apply-config.sh https://raw.githubusercontent.com/manuja-me/nixos-config/main/apply-config.sh
+   
+   # Make it executable
+   chmod +x apply-config.sh
+   
+   # Run the script
+   ./apply-config.sh
+   ```
+
+3. **Manual Installation**:
 
    ```bash
    git clone https://github.com/manuja-me/nixos-config.git
    cd nixos-config
+   ./apply-config.sh
    ```
 
-3. **Adjust configuration for your system**:
+4. **Adjust configuration for your system**:
 
    - Edit `variables.nix` to set your username, hostname, and other personal settings
    - Review and modify `hosts/machine-specific/` files to match your hardware
    - Customize `home-manager/programs/` and `home-manager/themes/` to your preferences
 
-4. **Build and apply the system configuration**:
+5. **Build and apply the system configuration**:
 
    ```bash
    # Apply the full system configuration
    sudo nixos-rebuild switch --flake .#default
    ```
 
-5. **Apply the Home Manager configuration**:
+6. **Apply the Home Manager configuration**:
 
    ```bash
    # Apply user-level configurations
    home-manager switch --flake .#default
    ```
 
-6. **Reboot to ensure all changes take effect**:
+7. **Reboot to ensure all changes take effect**:
 
    ```bash
    sudo reboot
