@@ -9,6 +9,14 @@ BLUE='\033[0;34m'
 CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
+# Check if running as root, if not, restart with sudo
+if [ "$EUID" -ne 0 ]; then
+  echo -e "${YELLOW}This script requires root privileges for some operations.${NC}"
+  echo "Restarting with sudo..."
+  exec sudo bash "$0" "$@"
+  exit $?
+fi
+
 # Print header
 echo -e "${BLUE}╔════════════════════════════════════════════════════════════╗${NC}"
 echo -e "${BLUE}║             ${CYAN}NixOS Configuration Setup Tool${BLUE}             ║${NC}"
@@ -22,22 +30,89 @@ if [ ! -f /etc/nixos/configuration.nix ]; then
     exit 1
 fi
 
-# Check for required commands
-for cmd in git sed sudo; do
+# Check for required commands and install them if needed
+needed_pkgs=""
+for cmd in git sed curl; do
     if ! command -v $cmd &> /dev/null; then
-        echo -e "${RED}Error: Required command '$cmd' not found.${NC}"
-        echo "Please install it first with 'nix-env -iA nixos.${cmd}'"
-        exit 1
+        echo -e "${YELLOW}Required command '$cmd' not found. Will install it.${NC}"
+        needed_pkgs="$needed_pkgs $cmd"
     fi
 done
 
-# Path to variables.nix file
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-vars_file="${SCRIPT_DIR}/variables.nix"
+if [ -n "$needed_pkgs" ]; then
+    echo -e "${CYAN}Installing required packages:${NC}$needed_pkgs"
+    nix-env -iA nixos.git nixos.gnused nixos.curl
+fi
+
+# Backup original NixOS configuration
+echo -e "${CYAN}Backing up original NixOS configuration...${NC}"
+timestamp=$(date +%Y%m%d%H%M%S)
+backup_dir="/etc/nixos.backup.$timestamp"
+mkdir -p "$backup_dir"
+cp -r /etc/nixos/* "$backup_dir/"
+echo -e "${GREEN}✓${NC} Original configuration backed up to $backup_dir"
+
+# Enable flakes if not already enabled
+if ! grep -q "experimental-features.*flakes" /etc/nixos/configuration.nix; then
+    echo -e "${YELLOW}Flakes are not enabled in your system configuration.${NC}"
+    echo "Adding flakes configuration to /etc/nixos/configuration.nix..."
+    
+    # Add flakes configuration to the existing file
+    sed -i '/^{/a \  nix.settings.experimental-features = [ "nix-command" "flakes" ];' /etc/nixos/configuration.nix
+    sed -i '/environment.systemPackages/a \    git\n    curl' /etc/nixos/configuration.nix 2>/dev/null || \
+    sed -i '/^{/a \  environment.systemPackages = with pkgs; [\n    git\n    curl\n  ];' /etc/nixos/configuration.nix
+    
+    echo -e "${CYAN}Rebuilding NixOS to enable flakes...${NC}"
+    nixos-rebuild switch
+    
+    echo -e "${GREEN}✓${NC} Flakes are now enabled on your system."
+else
+    echo -e "${GREEN}✓${NC} Flakes are already enabled on your system."
+fi
+
+# Check if repository already exists
+REPO_DIR="/home/$SUDO_USER/nixos-config"
+if [ -d "$REPO_DIR" ]; then
+    echo -e "${YELLOW}Repository already exists at $REPO_DIR${NC}"
+    read -p "Would you like to use it? (Y/n): " use_existing
+    use_existing=${use_existing:-Y}
+    
+    if [[ "$use_existing" =~ ^[Yy]$ ]]; then
+        cd "$REPO_DIR"
+    else
+        read -p "Do you want to delete the existing repository and clone a fresh copy? (y/N): " delete_repo
+        delete_repo=${delete_repo:-N}
+        
+        if [[ "$delete_repo" =~ ^[Yy]$ ]]; then
+            echo "Removing existing repository..."
+            rm -rf "$REPO_DIR"
+            clone_repo=true
+        else
+            echo "Please manually handle the repository and run this script again."
+            exit 0
+        fi
+    fi
+else
+    clone_repo=true
+fi
+
+# Clone repository if needed
+if [ "$clone_repo" = true ]; then
+    echo -e "${CYAN}Cloning nixos-config repository...${NC}"
+    git clone https://github.com/manuja-me/nixos-config.git "$REPO_DIR"
+    cd "$REPO_DIR"
+    echo -e "${GREEN}✓${NC} Repository cloned to $REPO_DIR"
+    
+    # Fix ownership of the cloned repository
+    chown -R $SUDO_USER:$SUDO_USER "$REPO_DIR"
+fi
+
+# Ensure we're working with the right file paths
+vars_file="$REPO_DIR/variables.nix"
 
 if [ ! -f "$vars_file" ]; then
     echo -e "${RED}Error: variables.nix file not found at $vars_file${NC}"
-    echo "Please run this script from the root of the nixos-config repository."
+    echo "Please check that the repository was cloned correctly."
     exit 1
 fi
 
@@ -55,23 +130,6 @@ update_var() {
     fi
 }
 
-# Configure flakes if not already enabled
-if ! grep -q "experimental-features" /etc/nixos/configuration.nix; then
-    echo -e "${YELLOW}Flakes are not enabled in your system configuration.${NC}"
-    read -p "Would you like to enable them now? (Y/n): " enable_flakes
-    enable_flakes=${enable_flakes:-Y}
-    
-    if [[ "$enable_flakes" =~ ^[Yy]$ ]]; then
-        echo "Adding flakes configuration to /etc/nixos/configuration.nix..."
-        sudo sed -i '/^{/a \  nix.settings.experimental-features = [ "nix-command" "flakes" ];' /etc/nixos/configuration.nix
-        echo "Rebuilding NixOS to enable flakes..."
-        sudo nixos-rebuild switch
-    else
-        echo -e "${RED}Flakes are required for this configuration. Exiting.${NC}"
-        exit 1
-    fi
-fi
-
 echo -e "${CYAN}Let's configure your NixOS system!${NC}"
 echo "Please provide the following information (press Enter for defaults):"
 echo
@@ -80,9 +138,10 @@ echo
 read -p "Enter hostname [nixos]: " input_hostname
 hostname="${input_hostname:-nixos}"
 
-# Get username
-read -p "Enter username [manuja]: " input_username
-username="${input_username:-manuja}"
+# Get username (use SUDO_USER as default if available)
+default_user=${SUDO_USER:-manuja}
+read -p "Enter username [$default_user]: " input_username
+username="${input_username:-$default_user}"
 
 # Get timezone with validation
 read -p "Enter timezone [Asia/Colombo]: " input_timezone
@@ -135,8 +194,9 @@ read -p "Enter font size [12]: " font_size
 font_size="${font_size:-12}"
 
 # NixOS version
-read -p "Enter NixOS version [24.11]: " input_version
-nixos_version="${input_version:-24.11}"
+NIXOS_VERSION=$(nixos-version | cut -d'.' -f1,2)
+read -p "Enter NixOS version [$NIXOS_VERSION]: " input_version
+nixos_version="${input_version:-$NIXOS_VERSION}"
 
 # Show summary and ask for confirmation
 echo
@@ -177,44 +237,89 @@ sed -i'' -E "s/(\"size\":\s*)[0-9]+/\1${font_size}/" "$vars_file"
 
 echo -e "${GREEN}✓${NC} variables.nix updated successfully."
 
-# Install home-manager if not already installed
-if ! command -v home-manager &> /dev/null; then
-    echo -e "${YELLOW}Home Manager not found. Installing...${NC}"
-    nix-channel --add https://github.com/nix-community/home-manager/archive/release-${nixos_version}.tar.gz home-manager
-    nix-channel --update
-    nix-shell '<home-manager>' -A install
-    if [ $? -ne 0 ]; then
-        echo -e "${RED}Error: Failed to install Home Manager.${NC}"
-        exit 1
-    fi
-fi
+# Link configurations to /etc/nixos
+echo -e "${CYAN}Linking configuration files to /etc/nixos...${NC}"
+echo "Creating a symbolic link from your nixos-config to /etc/nixos/configuration.nix"
+
+# Setup flake-enabled NixOS configuration
+cat > /etc/nixos/configuration.nix <<EOF
+# This is a minimal configuration that imports the flake-based configuration
+{ ... }: {
+  imports = [ ];
+  
+  # Enable experimental features
+  nix.settings.experimental-features = [ "nix-command" "flakes" ];
+  
+  # Add git for flake usage
+  environment.systemPackages = with pkgs; [
+    git
+    curl
+  ];
+  
+  # This is a helper configuration that will be replaced by the flake
+  system.stateVersion = "$nixos_version";
+}
+EOF
+
+# Create a flake.nix in /etc/nixos that imports our configuration
+cat > /etc/nixos/flake.nix <<EOF
+{
+  description = "NixOS system flake";
+
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-$nixos_version";
+    home-manager.url = "github:nix-community/home-manager/release-$nixos_version";
+    home-manager.inputs.nixpkgs.follows = "nixpkgs";
+    
+    # Reference to our actual configuration
+    my-config = {
+      url = "path:$REPO_DIR";
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.home-manager.follows = "home-manager";
+    };
+  };
+
+  outputs = { self, nixpkgs, home-manager, my-config, ... }:
+    my-config.outputs;
+}
+EOF
+
+echo -e "${GREEN}✓${NC} NixOS configuration setup to use flakes from $REPO_DIR"
+
+# Install home-manager
+echo -e "${CYAN}Setting up Home Manager...${NC}"
+nix-channel --add https://github.com/nix-community/home-manager/archive/release-${nixos_version}.tar.gz home-manager
+nix-channel --update
 
 # Apply system configuration
 echo -e "${CYAN}Rebuilding NixOS system configuration...${NC}"
 echo "This may take a while depending on your system."
-echo "Please be patient and enter your password when prompted."
+echo "Please be patient."
 
-if ! sudo nixos-rebuild switch --flake .#default; then
+if ! nixos-rebuild switch --flake /etc/nixos#default; then
     echo -e "${RED}Error: nixos-rebuild failed${NC}"
     echo "Please check the error messages above and fix any issues in your configuration."
-    read -p "Would you like to continue to home-manager setup anyway? (y/N): " continue_hm
-    continue_hm=${continue_hm:-N}
-    if [[ ! "$continue_hm" =~ ^[Yy]$ ]]; then
-        exit 1
-    fi
+    
+    echo -e "${YELLOW}Rolling back to original configuration...${NC}"
+    cp -r "$backup_dir"/* /etc/nixos/
+    nixos-rebuild switch
+    
+    exit 1
 else
     echo -e "${GREEN}✓${NC} System configuration applied successfully."
 fi
 
-# Apply Home Manager configuration
-echo -e "${CYAN}Applying Home Manager configuration...${NC}"
-if ! home-manager switch --flake .#default; then
-    echo -e "${RED}Error: home-manager switch failed${NC}"
-    echo "Please check the error messages above and fix any issues in your configuration."
-    exit 1
-else
-    echo -e "${GREEN}✓${NC} Home Manager configuration applied successfully."
+# Create the user if it doesn't exist
+if ! id "$username" &>/dev/null; then
+    echo -e "${CYAN}Creating user $username...${NC}"
+    useradd -m -G wheel -s /run/current-system/sw/bin/zsh "$username"
+    passwd "$username"
 fi
+
+# Run home-manager as the specified user
+echo -e "${CYAN}Applying Home Manager configuration for $username...${NC}"
+su - "$username" -c "mkdir -p ~/.config/home-manager"
+su - "$username" -c "home-manager switch --flake /etc/nixos#default || echo 'Home-manager failed, but we will continue.'"
 
 echo
 echo -e "${GREEN}══════════════════════════════════════════════════════════════${NC}"
@@ -222,12 +327,14 @@ echo -e "${GREEN}                 Configuration Complete!                      $
 echo -e "${GREEN}══════════════════════════════════════════════════════════════${NC}"
 echo
 echo "Your NixOS system has been configured with your settings."
-echo "You may need to log out and back in for all changes to take effect."
-echo
+echo "The original configuration is backed up at $backup_dir"
+echo "Your custom configuration is at $REPO_DIR"
+echo 
 echo -e "${CYAN}What's next?${NC}"
-echo "1. Review your configuration in ${vars_file}"
-echo "2. Customize programs in home-manager/programs/"
+echo "1. Review your configuration in $vars_file"
+echo "2. Customize programs in $REPO_DIR/home-manager/programs/"
 echo "3. Learn more about NixOS and Home Manager in the documentation"
+echo "4. To update your system in the future, run: nixos-rebuild switch --flake /etc/nixos#default"
 echo
 echo "Enjoy your new NixOS system!"
 
@@ -236,5 +343,5 @@ reboot_now=${reboot_now:-N}
 
 if [[ "$reboot_now" =~ ^[Yy]$ ]]; then
     echo "Rebooting system..."
-    sudo reboot
+    reboot
 fi
