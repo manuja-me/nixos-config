@@ -53,7 +53,7 @@ if ! grep -q "experimental-features.*flakes" /etc/nixos/configuration.nix; then
     echo "Adding flakes configuration to /etc/nixos/configuration.nix..."
     
     # Add flakes configuration to the existing file
-    sed -i '/^{/a \  nix.settings.experimental-features = [ "nix-command" "flakes" ];' /etc/nixos/configuration.nix
+    sed -i '/^{/a \  nix.settings.experimental-features = [ "nix-command", "flakes" ];' /etc/nixos/configuration.nix
     sed -i '/environment.systemPackages/a \    git\n    curl' /etc/nixos/configuration.nix 2>/dev/null || \
     sed -i '/^{/a \  environment.systemPackages = with pkgs; [\n    git\n    curl\n  ];' /etc/nixos/configuration.nix
     
