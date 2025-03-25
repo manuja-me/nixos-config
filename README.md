@@ -144,7 +144,7 @@ This repository contains a modular NixOS configuration using flakes and Home Man
 2. **Clone this repository**:
 
    ```bash
-   git clone https://github.com/yourusername/nixos-config.git
+   git clone https://github.com/manuja-me/nixos-config.git
    cd nixos-config
    ```
 

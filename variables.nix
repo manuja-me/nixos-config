@@ -82,5 +82,7 @@ in
   # Make the whole colors object accessible
   "colors": {
     "active": gruvboxColors.gruvbox.dark
-  }
+  },
+  
+  timezone = "Asia/Colombo"
 }
