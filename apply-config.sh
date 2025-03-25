@@ -125,22 +125,44 @@ update_var() {
     fi
 }
 
+# Function to get user input with validation
+get_user_input() {
+    local prompt=$1
+    local default=$2
+    local var_name=$3
+    local validation=$4
+    local error_msg=$5
+    local value=""
+    local valid=false
+
+    while [ "$valid" != true ]; do
+        read -p "$prompt [$default]: " input
+        value="${input:-$default}"
+        
+        if [ -z "$validation" ] || [[ "$value" =~ $validation ]]; then
+            valid=true
+        else
+            echo -e "${YELLOW}$error_msg${NC}"
+        fi
+    done
+    
+    # Set the variable in the calling environment
+    eval "$var_name=\"$value\""
+}
+
 echo -e "${CYAN}Let's configure your NixOS system!${NC}"
-echo "Please provide the following information (press Enter for defaults):"
+echo "Please provide the following information:"
 echo
 
-# Get hostname
-read -p "Enter hostname [nixos]: " input_hostname
-hostname="${input_hostname:-nixos}"
+# Get hostname with validation
+get_user_input "Enter hostname" "nixos" "hostname" "^[a-zA-Z0-9-]+$" "Hostname must contain only letters, numbers, and hyphens."
 
-# Get username (use SUDO_USER as default if available)
+# Get username with validation
 default_user=${SUDO_USER:-manuja}
-read -p "Enter username [$default_user]: " input_username
-username="${input_username:-$default_user}"
+get_user_input "Enter username" "$default_user" "username" "^[a-z_][a-z0-9_-]*$" "Username must start with a letter and contain only lowercase letters, numbers, underscores, and hyphens."
 
 # Get timezone with validation
-read -p "Enter timezone [Asia/Colombo]: " input_timezone
-timezone="${input_timezone:-Asia/Colombo}"
+get_user_input "Enter timezone" "Asia/Colombo" "timezone"
 
 # Validate timezone
 if [ -n "$timezone" ] && ! find /usr/share/zoneinfo -type f -name "*" | grep -q "$timezone"; then
@@ -148,67 +170,104 @@ if [ -n "$timezone" ] && ! find /usr/share/zoneinfo -type f -name "*" | grep -q 
     timezone="Asia/Colombo"
 fi
 
-# Machine type
+# Machine type selection with explicit prompt
 echo "Select machine type:"
-echo "1) Laptop (default)"
+echo "1) Laptop"
 echo "2) Desktop"
 echo "3) Virtual Machine"
-read -p "Enter choice [1]: " machine_choice
-machine_choice="${machine_choice:-1}"
+machine_choice=""
+while [[ ! "$machine_choice" =~ ^[1-3]$ ]]; do
+    read -p "Enter choice (1-3) [1]: " input
+    machine_choice="${input:-1}"
+    
+    if [[ ! "$machine_choice" =~ ^[1-3]$ ]]; then
+        echo -e "${YELLOW}Invalid choice. Please enter 1, 2, or 3.${NC}"
+    fi
+done
 
 case $machine_choice in
     1) machine_type="laptop" ;;
     2) machine_type="desktop" ;;
     3) machine_type="vm" ;;
-    *) echo -e "${YELLOW}Invalid choice. Using laptop as default.${NC}"; machine_type="laptop" ;;
 esac
+echo -e "${GREEN}Selected: ${NC}$machine_type"
 
-# Display settings
-read -p "Enter display resolution (WxH) [1920x1080]: " resolution
-resolution="${resolution:-1920x1080}"
+# Display settings with validation
+resolution=""
+while [[ ! "$resolution" =~ ^[0-9]+x[0-9]+$ ]]; do
+    read -p "Enter display resolution (WxH) [1920x1080]: " input
+    resolution="${input:-1920x1080}"
+    
+    if [[ ! "$resolution" =~ ^[0-9]+x[0-9]+$ ]]; then
+        echo -e "${YELLOW}Invalid format. Please use format like '1920x1080'.${NC}"
+    fi
+done
 width=$(echo $resolution | cut -d'x' -f1)
 height=$(echo $resolution | cut -d'x' -f2)
 
-read -p "Enter refresh rate [144]: " refresh_rate
-refresh_rate="${refresh_rate:-144}"
+refresh_rate=""
+while [[ ! "$refresh_rate" =~ ^[0-9]+$ ]]; do
+    read -p "Enter refresh rate [144]: " input
+    refresh_rate="${input:-144}"
+    
+    if [[ ! "$refresh_rate" =~ ^[0-9]+$ ]]; then
+        echo -e "${YELLOW}Invalid refresh rate. Please enter a number.${NC}"
+    fi
+done
 
-# Theme settings
+# Theme settings with explicit prompt
 echo "Select theme variant:"
-echo "1) Gruvbox Dark (default)"
+echo "1) Gruvbox Dark"
 echo "2) Gruvbox Light"
-read -p "Enter choice [1]: " theme_choice
-theme_choice="${theme_choice:-1}"
+theme_choice=""
+while [[ ! "$theme_choice" =~ ^[1-2]$ ]]; do
+    read -p "Enter choice (1-2) [1]: " input
+    theme_choice="${input:-1}"
+    
+    if [[ ! "$theme_choice" =~ ^[1-2]$ ]]; then
+        echo -e "${YELLOW}Invalid choice. Please enter 1 or 2.${NC}"
+    fi
+done
 
 case $theme_choice in
     1) theme_variant="gruvbox-dark" ;;
     2) theme_variant="gruvbox-light" ;;
-    *) echo -e "${YELLOW}Invalid choice. Using Gruvbox Dark as default.${NC}"; theme_variant="gruvbox-dark" ;;
 esac
+echo -e "${GREEN}Selected: ${NC}$theme_variant"
 
-read -p "Enter font size [12]: " font_size
-font_size="${font_size:-12}"
+font_size=""
+while [[ ! "$font_size" =~ ^[0-9]+$ ]]; do
+    read -p "Enter font size [12]: " input
+    font_size="${input:-12}"
+    
+    if [[ ! "$font_size" =~ ^[0-9]+$ ]]; then
+        echo -e "${YELLOW}Invalid font size. Please enter a number.${NC}"
+    fi
+done
 
-# NixOS version
-NIXOS_VERSION=$(nixos-version | cut -d'.' -f1,2)
-read -p "Enter NixOS version [$NIXOS_VERSION]: " input_version
-nixos_version="${input_version:-$NIXOS_VERSION}"
+# Get NixOS version with validation
+NIXOS_VERSION=$(nixos-version | cut -d'.' -f1,2 || echo "24.05")
+get_user_input "Enter NixOS version" "$NIXOS_VERSION" "nixos_version" "^[0-9]+\.[0-9]+$" "Version must be in format like '24.05'"
 
 # Show summary and ask for confirmation
 echo
 echo -e "${CYAN}Configuration Summary:${NC}"
-echo "  Hostname: $hostname"
-echo "  Username: $username"
-echo "  Timezone: $timezone"
-echo "  Machine Type: $machine_type"
-echo "  Display: ${width}x${height} @ ${refresh_rate}Hz"
-echo "  Theme: $theme_variant (Font size: ${font_size}pt)"
-echo "  NixOS Version: $nixos_version"
+echo -e "  Hostname: ${GREEN}$hostname${NC}"
+echo -e "  Username: ${GREEN}$username${NC}"
+echo -e "  Timezone: ${GREEN}$timezone${NC}"
+echo -e "  Machine Type: ${GREEN}$machine_type${NC}"
+echo -e "  Display: ${GREEN}${width}x${height} @ ${refresh_rate}Hz${NC}"
+echo -e "  Theme: ${GREEN}$theme_variant${NC} (Font size: ${GREEN}${font_size}pt${NC})"
+echo -e "  NixOS Version: ${GREEN}$nixos_version${NC}"
 echo
 
-read -p "Proceed with these settings? (Y/n): " proceed
-proceed=${proceed:-Y}
+confirm=""
+while [[ ! "$confirm" =~ ^[YyNn]$ ]]; do
+    read -p "Proceed with these settings? (Y/n): " input
+    confirm="${input:-Y}"
+done
 
-if [[ ! "$proceed" =~ ^[Yy]$ ]]; then
+if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
     echo "Setup cancelled. No changes made."
     exit 0
 fi
