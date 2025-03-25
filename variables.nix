@@ -97,5 +97,16 @@ in
     ]
   },
   
+  # Boot configuration
+  "boot": {
+    "loader": "grub",     # Options: "grub" or "systemd-boot"
+    "timeout": 5,
+    "grub": {
+      "useOSProber": true,
+      "backgroundColor": "#282828",
+      "fontSize": 16
+    }
+  },
+  
   timezone = "Asia/Colombo"
 }

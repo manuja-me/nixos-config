@@ -9,6 +9,13 @@ BLUE='\033[0;34m'
 CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
+# Check if running with sudo/root privileges
+if [ "$EUID" -ne 0 ]; then
+    echo -e "${YELLOW}This script requires administrative privileges to modify system files.${NC}"
+    echo -e "Please run with sudo: ${CYAN}sudo $0 $*${NC}"
+    exit 1
+fi
+
 # Print header
 echo -e "${BLUE}╔════════════════════════════════════════════════════════════╗${NC}"
 echo -e "${BLUE}║             ${CYAN}NixOS Configuration Setup Tool${BLUE}             ║${NC}"
@@ -125,7 +132,7 @@ update_var() {
     fi
 }
 
-# Function to get user input with validation - improved to ensure manual input
+# Function to get user input with validation - improved to ensure explicit input
 get_user_input() {
     local prompt=$1
     local default=$2
@@ -134,27 +141,30 @@ get_user_input() {
     local error_msg=$5
     local value=""
     local valid=false
-    local input=""
-
+    
     while [ "$valid" != true ]; do
-        # Clear input before reading new value
-        unset input
+        # Display the prompt with default value
+        read -p "$prompt [$default]: " input_value
         
-        # Show prompt and wait for real input
-        read -p "$prompt [$default]: " input
-        
-        # Only use default if input is completely empty (just Enter pressed)
-        if [ -z "$input" ]; then
-            value="$default"
+        # If input is empty, confirm before using default
+        if [ -z "$input_value" ]; then
+            read -p "Use default value '$default'? (y/n): " use_default
+            if [[ "$use_default" =~ ^[Yy]$ ]]; then
+                value="$default"
+                valid=true
+            else
+                echo "Please enter a value."
+                continue
+            fi
         else
-            value="$input"
-        fi
-        
-        # Validate the input
-        if [ -z "$validation" ] || [[ "$value" =~ $validation ]]; then
-            valid=true
-        else
-            echo -e "${YELLOW}$error_msg${NC}"
+            value="$input_value"
+            
+            # Validate the input
+            if [ -z "$validation" ] || [[ "$value" =~ $validation ]]; then
+                valid=true
+            else
+                echo -e "${YELLOW}$error_msg${NC}"
+            fi
         fi
     done
     
@@ -163,7 +173,7 @@ get_user_input() {
     echo -e "${GREEN}Set ${var_name}=${value}${NC}"
 }
 
-# Function for selecting from a menu
+# Function for selecting from a menu with explicit confirmation
 select_from_menu() {
     local prompt=$1
     local options=$2
@@ -177,19 +187,20 @@ select_from_menu() {
     echo "$prompt"
     echo "$options"
     
-    # Keep asking until we get valid input
     while [ "$valid" != true ]; do
-        # Clear input before reading new value
-        unset input
+        read -p "Enter choice [${default}]: " input_choice
         
-        # Read user input
-        read -p "Enter choice [${default}]: " input
-        
-        # Only use default if input is completely empty
-        if [ -z "$input" ]; then
-            choice="$default"
+        # If input is empty, confirm before using default
+        if [ -z "$input_choice" ]; then
+            read -p "Use default choice '${default}'? (y/n): " use_default
+            if [[ "$use_default" =~ ^[Yy]$ ]]; then
+                choice="$default"
+            else
+                echo "Please enter a choice."
+                continue
+            fi
         else
-            choice="$input"
+            choice="$input_choice"
         fi
         
         # Validate numeric input within range
@@ -211,7 +222,8 @@ select_from_menu() {
 }
 
 echo -e "${CYAN}Let's configure your NixOS system!${NC}"
-echo "Please provide the following information:"
+echo "Please provide the following information for each setting."
+echo "You'll be asked to confirm each value explicitly."
 echo
 
 # Get hostname with validation
@@ -258,6 +270,54 @@ get_user_input "Enter font size" "12" "font_size" "^[0-9]+$" "Invalid font size.
 NIXOS_VERSION=$(nixos-version | cut -d'.' -f1,2 || echo "24.05")
 get_user_input "Enter NixOS version" "$NIXOS_VERSION" "nixos_version" "^[0-9]+\.[0-9]+$" "Version must be in format like '24.05'"
 
+# Add boot loader selection to the configuration
+echo -e "${CYAN}Boot Loader Configuration:${NC}"
+echo "1) GRUB"
+echo "2) systemd-boot"
+boot_loader_choice=""
+while [[ ! "$boot_loader_choice" =~ ^[1-2]$ ]]; do
+    read -p "Select boot loader (1-2) [1]: " input
+    boot_loader_choice="${input:-1}"
+    
+    if [[ ! "$boot_loader_choice" =~ ^[1-2]$ ]]; then
+        echo -e "${YELLOW}Invalid choice. Please enter 1 or 2.${NC}"
+    fi
+done
+
+case $boot_loader_choice in
+    1) boot_loader="grub" ;;
+    2) boot_loader="systemd-boot" ;;
+esac
+echo -e "${GREEN}Selected: ${NC}$boot_loader"
+
+# Update the boot loader value
+if grep -q '"boot":' "$vars_file"; then
+    sed -i'' -E "s/(\"loader\":\s*\")[^\"]+(\",)/\1${boot_loader}\2/" "$vars_file"
+    echo -e "${GREEN}✓${NC} Updated boot loader to ${boot_loader}"
+else
+    echo -e "${YELLOW}⚠${NC} Could not find boot configuration in variables.nix"
+fi
+
+# For GRUB, ask for device
+if [ "$boot_loader" == "grub" ]; then
+    # Get available disks
+    echo "Available disks:"
+    lsblk -d -o NAME,SIZE,MODEL | grep -v loop
+    
+    read -p "Enter disk for GRUB (e.g., sda, nvme0n1) or 'nodev' for EFI [nodev]: " grub_device
+    grub_device="${grub_device:-nodev}"
+    
+    if [ "$grub_device" != "nodev" ]; then
+        grub_device="/dev/$grub_device"
+    fi
+    
+    # Update GRUB device in variables.nix
+    if grep -q '"grub":' "$vars_file"; then
+        sed -i'' -E "s/(\"device\":\s*\")[^\"]+(\",)/\1${grub_device}\2/" "$vars_file"
+        echo -e "${GREEN}✓${NC} Updated GRUB device to ${grub_device}"
+    fi
+fi
+
 # Show summary and ask for confirmation
 echo
 echo -e "${CYAN}Configuration Summary:${NC}"
@@ -268,6 +328,10 @@ echo -e "  Machine Type: ${GREEN}$machine_type${NC}"
 echo -e "  Display: ${GREEN}${width}x${height} @ ${refresh_rate}Hz${NC}"
 echo -e "  Theme: ${GREEN}$theme_variant${NC} (Font size: ${GREEN}${font_size}pt${NC})"
 echo -e "  NixOS Version: ${GREEN}$nixos_version${NC}"
+echo -e "  Boot Loader: ${GREEN}$boot_loader${NC}"
+if [ "$boot_loader" == "grub" ]; then
+    echo -e "  GRUB Device: ${GREEN}$grub_device${NC}"
+fi
 echo
 
 # Confirm settings
@@ -396,6 +460,18 @@ fi
 echo -e "${CYAN}Applying Home Manager configuration for $username...${NC}"
 su - "$username" -c "mkdir -p ~/.config/home-manager"
 su - "$username" -c "home-manager switch --flake /etc/nixos#default || echo 'Home-manager failed, but we will continue.'"
+
+# Add a section to modify the README.md file to include the proper curl commands
+echo -e "${CYAN}Updating README.md with installation instructions...${NC}"
+
+# Create a backup of the README.md file
+cp "$REPO_DIR/README.md" "$REPO_DIR/README.md.bak"
+
+# Update the curl command in the README
+# This is a simplified update, adjust according to your repository structure
+sed -i "s|curl -sSL https://raw.githubusercontent.com/[^/]*/nixos-config/main/apply-config.sh|curl -sSL https://raw.githubusercontent.com/manuja-me/nixos-config/main/apply-config.sh|g" "$REPO_DIR/README.md"
+
+echo -e "${GREEN}✓${NC} README.md updated with the correct installation command."
 
 echo
 echo -e "${GREEN}══════════════════════════════════════════════════════════════${NC}"

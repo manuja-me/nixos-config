@@ -1,6 +1,7 @@
 { 
   config, 
   pkgs, 
+  lib, 
   ... 
 }: 
 
@@ -11,6 +12,39 @@ in
   imports = [ 
     ./configuration.nix 
   ]; 
+
+  # Configure the boot loader based on variables
+  boot.loader = if variables.boot.loader == "grub" then {
+    grub = {
+      enable = true;
+      device = variables.boot.grub.device or "nodev";
+      efiSupport = true;
+      useOSProber = variables.boot.grub.useOSProber or true;
+      backgroundColor = variables.boot.grub.backgroundColor;
+      fontSize = variables.boot.grub.fontSize;
+    };
+    
+    efi = {
+      canTouchEfiVariables = true;
+      efiSysMountPoint = "/boot/efi";
+    };
+    
+    timeout = variables.boot.timeout or 5;
+    systemd-boot.enable = false;
+  } else {
+    systemd-boot = {
+      enable = true;
+      configurationLimit = 10;
+      consoleMode = "auto";
+    };
+    
+    efi = {
+      canTouchEfiVariables = true;
+    };
+    
+    timeout = variables.boot.timeout or 5;
+    grub.enable = false;
+  };
 
   # System settings
   networking.hostName = variables.hostname; # Using the hostname from variables

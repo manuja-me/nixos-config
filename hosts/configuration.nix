@@ -169,4 +169,38 @@ in
     inputs.thorium-browser.overlays.default
     // ...existing overlays...
   ];
+
+  # Boot configuration using GRUB
+  boot = {
+    loader = {
+      # Use GRUB bootloader
+      grub = {
+        enable = true;
+        device = "nodev";    # Install GRUB to the ESP partition
+        efiSupport = true;   # Enable EFI support
+        useOSProber = true;  # Auto-detect other operating systems
+        theme = null;        # No theme by default
+        fontSize = 16;       # Increase font size for better readability
+        configurationLimit = 10;  # Limit the number of configurations
+        # Apply Gruvbox-like colors
+        splashImage = null;
+        backgroundColor = "#282828";  # Dark background
+      };
+      
+      # General EFI settings
+      efi = {
+        canTouchEfiVariables = true;
+        efiSysMountPoint = "/boot/efi";  # Default EFI mount point
+      };
+      
+      # Disable systemd-boot
+      systemd-boot.enable = false;
+    };
+    
+    # Timeout in seconds for menu display
+    loader.timeout = 5;
+  };
+
+  # Ensure Plymouth is disabled (often used with systemd-boot)
+  boot.plymouth.enable = false;
 }
