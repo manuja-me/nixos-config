@@ -1,0 +1,134 @@
+# Sway configuration for Home Manager
+# Theme variables are now imported from variables.nix at build time
+
+set $mod Mod4
+
+# Theme variables (will be replaced during build)
+set $bg {{colors.background}}
+set $fg {{colors.foreground}}
+set $br {{colors.primary.light}}
+set $ac {{colors.brightAccent.green}}
+
+# Enable XWayland support
+xwayland enable
+
+# Display configuration - 1920x1080 @ 144Hz
+output * resolution 1920x1080@144Hz
+
+# Your preferred terminal emulator
+set $term alacritty
+
+# Your preferred application launcher
+set $menu wofi --show drun -i | xargs swaymsg exec --
+
+# Your preferred file manager (Thunar) and browser
+set $filemanager thunar
+set $browser thorium-browser
+
+# Keybindings
+bindsym $mod+Return exec $term
+# Use just Mod key for Wofi launcher
+bindcode $mod Menu exec $menu
+bindr $mod 133 exec $menu
+bindsym $mod+d exec $menu
+# New keybinding for Thunar (Mod+Shift+F)
+bindsym $mod+Shift+f exec $filemanager
+# Web browser keybinding (Mod+Shift+W)
+bindsym $mod+Shift+w exec $browser
+bindsym $mod+e exec $term -e yazi
+bindsym $mod+Shift+e kill
+bindsym $mod+Shift+c reload
+bindsym $mod+Shift+r restart
+
+# Lock screen
+bindsym $mod+l exec swaylock -f -c $bg
+
+# Screenshots
+bindsym $mod+Shift+s exec grim -g "$(slurp)" - | wl-copy
+
+# Function keys with improved notifications
+bindsym XF86MonBrightnessUp exec brightness-control --inc
+bindsym XF86MonBrightnessDown exec brightness-control --dec
+bindsym XF86AudioRaiseVolume exec volume-control --inc
+bindsym XF86AudioLowerVolume exec volume-control --dec
+bindsym XF86AudioMute exec volume-control --toggle
+bindsym XF86AudioMicMute exec volume-control --toggle-mic
+
+# Idle configuration
+exec swayidle -w \
+    timeout 300 'swaylock -f -c $bg' \
+    timeout 600 'swaymsg "output * dpms off"' resume 'swaymsg "output * dpms on"' \
+    before-sleep 'swaylock -f -c $bg'
+
+# Workspaces
+set $ws1 "1"
+set $ws2 "2"
+set $ws3 "3"
+set $ws4 "4"
+set $ws5 "5"
+set $ws6 "6"
+set $ws7 "7"
+set $ws8 "8"
+set $ws9 "9"
+
+# Assign workspaces to specific outputs
+workspace $ws1 output HDMI-A-1
+workspace $ws2 output eDP-1
+workspace $ws3 output eDP-1
+workspace $ws4 output eDP-1
+workspace $ws5 output eDP-1
+workspace $ws6 output eDP-1
+workspace $ws7 output eDP-1
+workspace $ws8 output eDP-1
+workspace $ws9 output eDP-1
+
+# Window decoration
+default_border pixel 2
+default_floating_border pixel 2
+hide_edge_borders smart
+smart_borders on
+smart_gaps on
+gaps inner 10
+gaps outer 5
+
+# Ensure no rounded corners
+for_window [class=".*"] border pixel 2
+for_window [app_id=".*"] border pixel 2
+
+# Colors                border  bg      text    indicator child_border
+client.focused          $br     $bg     $fg     $ac      $br
+client.focused_inactive $bg     $bg     $fg     $bg      $bg
+client.unfocused        $bg     $bg     $fg     $bg      $bg
+client.urgent           $ac     $ac     $fg     $ac      $ac
+
+# Status Bar
+bar {
+    swaybar_command waybar
+}
+
+# Floating windows
+for_window [app_id="pavucontrol"] floating enable
+for_window [app_id="blueberry.py"] floating enable
+for_window [class="floating"] floating enable
+for_window [window_role="pop-up"] floating enable
+for_window [window_role="bubble"] floating enable
+for_window [window_role="dialog"] floating enable
+for_window [window_type="dialog"] floating enable
+
+# Appearance
+exec swaybg -i /path/to/your/wallpaper.jpg -m fill
+
+# Autostart applications
+exec mako
+exec battery-monitor
+exec network-monitor
+exec nm-applet --indicator
+exec_always --no-startup-id autotiling
+
+# Focus follows mouse
+focus_follows_mouse yes
+
+# Keyboard configuration - swap Escape and Caps Lock
+input * {
+    xkb_options caps:swapescape
+}
