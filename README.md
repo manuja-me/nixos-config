@@ -6,6 +6,7 @@
 
 **Table of Contents**
 - [Overview](#overview)
+- [Manual Installation on a Fresh NixOS System](#manual-installation-on-a-fresh-nixos-system)
 - [Core Files](#core-files)
 - [System Configuration](#system-configuration)
 - [User Environment](#user-environment)
@@ -16,6 +17,182 @@
 ## Overview
 
 This repository contains a modular NixOS configuration using flakes and Home Manager, designed to provide a reproducible and customizable system environment with a focus on consistency and organization.
+
+## Manual Installation on a Fresh NixOS System
+
+### Prerequisites
+
+- A minimal NixOS installation (can be from a live USB)
+- Internet connection
+- Basic knowledge of command line usage
+
+### Step-by-Step Installation
+
+1. **First Boot and Initial Setup**
+
+   After installing minimal NixOS and booting into it for the first time, you'll need to enable flakes since they aren't enabled by default:
+
+   ```bash
+   # Open your initial system configuration
+   sudo nano /etc/nixos/configuration.nix
+   ```
+
+   Add these lines to your configuration file:
+   ```nix
+   { pkgs, ... }: {
+     # Your existing config...
+     
+     # Enable flakes and nix commands
+     nix.settings.experimental-features = [ "nix-command" "flakes" ];
+     
+     # Install essential tools
+     environment.systemPackages = with pkgs; [
+       git
+       curl
+       wget
+       vim
+     ];
+   }
+   ```
+
+   Save the file (Ctrl+O, Enter, then Ctrl+X) and apply the changes:
+   ```bash
+   sudo nixos-rebuild switch
+   ```
+
+2. **Clone the Configuration Repository**
+
+   Create a directory for the configuration and clone the repository:
+
+   ```bash
+   mkdir -p ~/nixos-setup
+   cd ~/nixos-setup
+   git clone https://github.com/manuja-me/nixos-config.git
+   cd nixos-config
+   ```
+
+3. **Customize the Configuration**
+
+   Before applying the configuration, you should customize it for your system:
+
+   ```bash
+   # Edit the variables file to set your username, hostname, etc.
+   nano variables.nix
+   ```
+
+   Review and modify hardware-specific configuration:
+   ```bash
+   # For laptop installation
+   nano hosts/machine-specific/laptop.nix
+   
+   # For desktop installation
+   nano hosts/machine-specific/desktop.nix
+   
+   # For virtual machine installation
+   nano hosts/machine-specific/vm.nix
+   ```
+
+4. **Make the Directory Available to NixOS**
+
+   Create a symlink to make your configuration accessible to the NixOS system:
+
+   ```bash
+   sudo ln -sf $PWD /etc/nixos/nixos-config
+   ```
+
+5. **Install Home Manager**
+
+   Home Manager needs to be installed for user-level configurations:
+
+   ```bash
+   # Create a temporary configuration to install home-manager
+   cat > ~/home-manager-install.nix <<EOF
+   {
+     description = "Home Manager installer";
+     inputs = {
+       nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+       home-manager = {
+         url = "github:nix-community/home-manager";
+         inputs.nixpkgs.follows = "nixpkgs";
+       };
+     };
+     outputs = { nixpkgs, home-manager, ... }: {
+       packages.x86_64-linux.default = home-manager.defaultPackage.x86_64-linux;
+     };
+   }
+   EOF
+   
+   # Install home-manager
+   nix profile install ~/home-manager-install.nix
+   ```
+
+6. **Apply System Configuration**
+
+   Apply the NixOS system configuration:
+
+   ```bash
+   # Apply the system configuration
+   sudo nixos-rebuild switch --flake /etc/nixos/nixos-config#default
+   ```
+
+7. **Apply User Configuration**
+
+   Now apply the Home Manager configuration for your user environment:
+
+   ```bash
+   # Apply the user-level configuration
+   home-manager switch --flake /etc/nixos/nixos-config#default
+   ```
+
+8. **Reboot to Complete Installation**
+
+   ```bash
+   sudo reboot
+   ```
+
+### Troubleshooting Common Issues
+
+1. **"error: flake 'path:/etc/nixos/nixos-config' does not exist"**
+   - Ensure the symlink was created correctly: `ls -la /etc/nixos/nixos-config`
+   - Try using the absolute path instead: `sudo nixos-rebuild switch --flake /home/yourusername/nixos-setup/nixos-config#default`
+
+2. **"error: attribute 'defaultPackage' missing"**
+   - Try installing home-manager with: 
+     ```bash
+     nix shell nixpkgs#home-manager --command home-manager switch --flake /etc/nixos/nixos-config#default
+     ```
+
+3. **Hardware detection issues**
+   - Run `lspci` and `lsusb` to identify your hardware
+   - Modify the appropriate file in `hosts/machine-specific/` to support your hardware
+
+### Updating Your System
+
+Once installed, updating your system is straightforward:
+
+```bash
+# Update flake inputs to latest versions
+cd /etc/nixos/nixos-config
+nix flake update
+
+# Apply system updates
+sudo nixos-rebuild switch --flake .#default
+
+# Apply user environment updates
+home-manager switch --flake .#default
+```
+
+### System Recovery
+
+If something goes wrong, you can roll back to a previous generation:
+
+```bash
+# List generations
+sudo nix-env --list-generations --profile /nix/var/nix/profiles/system
+
+# Roll back to previous generation
+sudo nixos-rebuild switch --rollback
+```
 
 ## Core Files
 
@@ -106,139 +283,6 @@ This repository contains a modular NixOS configuration using flakes and Home Man
 - **Web Browser**: Thorium Browser (Chromium fork)
 - **Theme**: Gruvbox Dark with consistent application across all programs
 - **Display**: Configured for 1920x1080 @ 144Hz
-
-## Installation and Usage
-
-### Prerequisites
-
-- A minimal NixOS installation (can be from a live USB)
-- Internet connection
-- Basic knowledge of command line usage
-
-### Initial Setup on a Fresh NixOS Installation
-
-1. **Install Git and enable flakes**:
-
-   ```bash
-   # Edit your temporary system configuration
-   sudo nano /etc/nixos/configuration.nix
-   ```
-
-   Add these lines to enable flakes:
-   ```nix
-   { pkgs, ... }: {
-     # Your existing config...
-     
-     nix.settings.experimental-features = [ "nix-command" "flakes" ];
-     environment.systemPackages = with pkgs; [
-       git
-       curl
-     ];
-   }
-   ```
-
-   Apply the changes:
-   ```bash
-   sudo nixos-rebuild switch
-   ```
-
-2. **Quick Installation with Curl (from TTY or terminal)**:
-
-   You can directly download and run the configuration script using curl:
-
-   ```bash
-   # Download and run the setup script
-   curl -sSL https://raw.githubusercontent.com/manuja-me/nixos-config/main/apply-config.sh | bash
-   ```
-
-   Or if you prefer to download the script first and then run it:
-
-   ```bash
-   # Download the script
-   curl -sSL -o apply-config.sh https://raw.githubusercontent.com/manuja-me/nixos-config/main/apply-config.sh
-   
-   # Make it executable
-   chmod +x apply-config.sh
-   
-   # Run the script
-   ./apply-config.sh
-   ```
-
-3. **Manual Installation**:
-
-   ```bash
-   git clone https://github.com/manuja-me/nixos-config.git
-   cd nixos-config
-   ./apply-config.sh
-   ```
-
-4. **Adjust configuration for your system**:
-
-   - Edit `variables.nix` to set your username, hostname, and other personal settings
-   - Review and modify `hosts/machine-specific/` files to match your hardware
-   - Customize `home-manager/programs/` and `home-manager/themes/` to your preferences
-
-5. **Build and apply the system configuration**:
-
-   ```bash
-   # Apply the full system configuration
-   sudo nixos-rebuild switch --flake .#default
-   ```
-
-6. **Apply the Home Manager configuration**:
-
-   ```bash
-   # Apply user-level configurations
-   home-manager switch --flake .#default
-   ```
-
-7. **Reboot to ensure all changes take effect**:
-
-   ```bash
-   sudo reboot
-   ```
-
-### Maintaining Your System
-
-- **Update your system**:
-
-  ```bash
-  # Update flake inputs to latest versions
-  nix flake update
-  
-  # Apply updates to system
-  sudo nixos-rebuild switch --flake .#default
-  
-  # Apply updates to user environment
-  home-manager switch --flake .#default
-  ```
-
-- **Roll back if needed**:
-
-  ```bash
-  # List generations
-  sudo nix-env --list-generations --profile /nix/var/nix/profiles/system
-  
-  # Roll back to previous generation
-  sudo nixos-rebuild switch --rollback
-  ```
-
-### Customization Guide
-
-1. **Add new system packages**:
-   - Edit `hosts/configuration.nix` to add system-wide packages
-   - Or add machine-specific packages in the relevant files under `hosts/machine-specific/`
-
-2. **Add user programs**:
-   - Edit `home-manager/programs/default.nix` for user applications
-   - Create new files in `home-manager/programs/` for complex program configurations
-
-3. **Change theme**:
-   - Modify `themes/gruvbox.nix` to adjust color scheme
-
-4. **Add custom packages**:
-   - Place package definitions in `pkgs/`
-   - Reference them in your configuration
 
 ## Keyboard Shortcuts and Aliases
 
