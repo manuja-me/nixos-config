@@ -340,15 +340,22 @@ cat > /etc/nixos/flake.nix <<EOF
     home-manager.url = "github:nix-community/home-manager/release-$nixos_version";
     home-manager.inputs.nixpkgs.follows = "nixpkgs";
     
+    # Add thorium-browser input
+    thorium-browser = {
+      url = "github:manuja-me/thorium-browser";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    
     # Reference to our actual configuration
     my-config = {
       url = "path:$REPO_DIR";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.home-manager.follows = "home-manager";
+      inputs.thorium-browser.follows = "thorium-browser";
     };
   };
 
-  outputs = { self, nixpkgs, home-manager, my-config, ... }:
+  outputs = { self, nixpkgs, home-manager, thorium-browser, my-config, ... }:
     my-config.outputs;
 }
 EOF

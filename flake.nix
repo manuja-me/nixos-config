@@ -7,8 +7,12 @@
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    # Add the Thorium browser flake as an input
-    thorium-browser.url = "./thorium-browser";
+    
+    # Add thorium-browser input
+    thorium-browser = {
+      url = "github:manuja-me/thorium-browser";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
   
   outputs = { self, nixpkgs, home-manager, thorium-browser, ... }:

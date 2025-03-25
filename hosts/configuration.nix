@@ -1,4 +1,4 @@
-{ config, pkgs, lib, ... }: 
+{ config, pkgs, lib, inputs, ... }: 
 
 let
   variables = import ./../variables.nix;
@@ -163,4 +163,10 @@ in
 
   # System options 
   system.stateVersion = "22.05"; 
+
+  # Add the thorium-browser overlay
+  nixpkgs.overlays = [
+    inputs.thorium-browser.overlays.default
+    // ...existing overlays...
+  ];
 }

@@ -29,7 +29,8 @@ in
     "xfce.thunar-volman",
     "xfce.tumbler",
     "ffmpegthumbnailer",
-    "gvfs"
+    "gvfs",
+    "thorium-browser" # Add Thorium Browser
   ],
   "swayConfig": {
     "modKey": "Mod4",
@@ -82,6 +83,18 @@ in
   # Make the whole colors object accessible
   "colors": {
     "active": gruvboxColors.gruvbox.dark
+  },
+  
+  # Thorium browser configuration
+  "thorium": {
+    "defaultBrowser": true,       # Set as default browser
+    "enableWideVine": false,      # DRM support (optional)
+    "commandLineArgs": [
+      "--enable-features=UseOzonePlatform",
+      "--ozone-platform=wayland",
+      "--enable-gpu-rasterization",
+      "--enable-zero-copy"
+    ]
   },
   
   timezone = "Asia/Colombo"
