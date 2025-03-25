@@ -2,17 +2,17 @@
   description = "NixOS configuration with Home Manager using flakes";
   
   inputs = {
+    # Ensure we're using nixos-unstable consistently
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     home-manager = {
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     
-    # Add thorium-browser input
-    thorium-browser = {
-      url = "github:manuja-me/thorium-browser";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
+    # Add thorium-browser input - point to local path
+    thorium-browser.url = "../thorium-browser";
+    # Uncomment when pushing to a remote repository:
+    # thorium-browser.url = "github:yourusername/thorium-browser-nix";
   };
   
   outputs = { self, nixpkgs, home-manager, thorium-browser, ... }:
@@ -30,6 +30,12 @@
       pkgs = import nixpkgs {
         inherit system;
         config = pkgsConfig;
+        # Add Thorium browser overlay
+        overlays = [
+          (final: prev: {
+            thorium-browser = thorium-browser.packages.${system}.default;
+          })
+        ];
       };
       
       # Helper function to create machine-specific configurations
@@ -38,6 +44,7 @@
         specialArgs = { 
           inherit machineType; 
           inherit variables;
+          inherit thorium-browser;
         };
         modules = [
           ./hosts/default.nix
@@ -48,11 +55,16 @@
            else ./hosts/machine-specific/laptop.nix)
           ./modules/default.nix
           ./modules/system/default.nix
+          ./modules/browsers/thorium.nix  # Add the dedicated Thorium module
           
           # Add global nixpkgs configuration
           {
             nixpkgs.config = pkgsConfig;
-            nixpkgs.overlays = [ ];  # Add overlays if needed
+            nixpkgs.overlays = [ 
+              (final: prev: {
+                thorium-browser = thorium-browser.packages.${system}.default;
+              })
+            ];
           }
         ];
       };
@@ -65,11 +77,10 @@
       };
 
       homeConfigurations.default = home-manager.lib.homeManagerConfiguration {
-        inherit system;
-        pkgs = nixpkgs.legacyPackages.${system};
+        inherit pkgs;
         extraSpecialArgs = { 
           inherit variables; 
-          thoriumBrowser = thorium-browser.packages.${system}.default;
+          inherit thorium-browser;
         };
         modules = [
           ./home-manager/default.nix
@@ -79,32 +90,20 @@
           ./home-manager/programs/waybar/default.nix
           ./home-manager/programs/neovim/default.nix
           ./home-manager/programs/alacritty/default.nix
-          ./home-manager/programs/zsh/default.nix  # Add the ZSH configuration
+          ./home-manager/programs/zsh/default.nix
           ./home-manager/programs/thunar/default.nix
+          ./home-manager/programs/thorium/default.nix  # Add the Thorium specific configuration
           ./home-manager/themes/default.nix
           
           # Add global nixpkgs configuration for home-manager
           {
             nixpkgs.config = pkgsConfig;
-            nixpkgs.overlays = [ ];  # Add overlays if needed
+            nixpkgs.overlays = [ 
+              (final: prev: {
+                thorium-browser = thorium-browser.packages.${system}.default;
+              })
+            ];
           }
-          
-          # Add Thorium browser config
-          ({ pkgs, thoriumBrowser, ... }: {
-            home.packages = [ thoriumBrowser ];
-            
-            # Set Thorium as the default browser
-            xdg.mimeApps = {
-              enable = true;
-              defaultApplications = {
-                "text/html" = "thorium-browser.desktop";
-                "x-scheme-handler/http" = "thorium-browser.desktop";
-                "x-scheme-handler/https" = "thorium-browser.desktop";
-                "x-scheme-handler/about" = "thorium-browser.desktop";
-                "x-scheme-handler/unknown" = "thorium-browser.desktop";
-              };
-            };
-          })
         ];
       };
     };

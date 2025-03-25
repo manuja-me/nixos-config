@@ -161,6 +161,22 @@ in
   services.upower.enable = true;
   powerManagement.enable = true;
 
+  # Enable Thorium browser
+  programs.thorium-browser = {
+    enable = true;
+    defaultBrowser = variables.thorium.defaultBrowser or true;
+    commandLineArgs = variables.thorium.commandLineArgs or [
+      "--enable-features=UseOzonePlatform"
+      "--ozone-platform=wayland"
+      "--enable-gpu-rasterization"
+      "--enable-zero-copy"
+    ];
+    enableWideVine = variables.thorium.enableWideVine or false;
+  };
+
+  # Wayland support for Thorium and other browsers
+  environment.sessionVariables.NIXOS_OZONE_WL = "1";
+
   # System options 
   system.stateVersion = "22.05"; 
 

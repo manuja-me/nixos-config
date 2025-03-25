@@ -4,6 +4,7 @@ in
 {
   "inputs": {
     "nixpkgs": {
+      // Update URL to use nixos-unstable consistently
       "url": "github:NixOS/nixpkgs/nixos-unstable"
     }
   },

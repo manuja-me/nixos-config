@@ -3,6 +3,7 @@
 <!-- Interactive Header: Badges & Table of Contents -->
 [![NixOS](https://img.shields.io/badge/NixOS-config--enabled-brightgreen)](https://nixos.org)
 [![Flakes](https://img.shields.io/badge/Flakes-enabled-blue)](https://nixos.wiki/wiki/Flakes)
+[![NixOS Unstable](https://img.shields.io/badge/NixOS-unstable-orange)](https://nixos.org)
 
 **Table of Contents**
 - [Overview](#overview)
@@ -110,9 +111,9 @@ This repository contains a modular NixOS configuration using flakes and Home Man
    {
      description = "Home Manager installer";
      inputs = {
-       nixpkgs.url = "github:nixos/nixpkgs/nixos-24.11";
+       nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
        home-manager = {
-         url = "github:nix-community/home-manager/release-24.11";
+         url = "github:nix-community/home-manager";
          inputs.nixpkgs.follows = "nixpkgs";
        };
      };
