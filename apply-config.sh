@@ -125,7 +125,7 @@ update_var() {
     fi
 }
 
-# Function to get user input with validation
+# Function to get user input with validation - improved to ensure manual input
 get_user_input() {
     local prompt=$1
     local default=$2
@@ -134,11 +134,23 @@ get_user_input() {
     local error_msg=$5
     local value=""
     local valid=false
+    local input=""
 
     while [ "$valid" != true ]; do
-        read -p "$prompt [$default]: " input
-        value="${input:-$default}"
+        # Clear input before reading new value
+        unset input
         
+        # Show prompt and wait for real input
+        read -p "$prompt [$default]: " input
+        
+        # Only use default if input is completely empty (just Enter pressed)
+        if [ -z "$input" ]; then
+            value="$default"
+        else
+            value="$input"
+        fi
+        
+        # Validate the input
         if [ -z "$validation" ] || [[ "$value" =~ $validation ]]; then
             valid=true
         else
@@ -148,6 +160,54 @@ get_user_input() {
     
     # Set the variable in the calling environment
     eval "$var_name=\"$value\""
+    echo -e "${GREEN}Set ${var_name}=${value}${NC}"
+}
+
+# Function for selecting from a menu
+select_from_menu() {
+    local prompt=$1
+    local options=$2
+    local var_name=$3
+    local default=$4
+    local result_var=$5
+    local option_count=$(echo "$options" | wc -l)
+    local choice=""
+    local valid=false
+    
+    echo "$prompt"
+    echo "$options"
+    
+    # Keep asking until we get valid input
+    while [ "$valid" != true ]; do
+        # Clear input before reading new value
+        unset input
+        
+        # Read user input
+        read -p "Enter choice [${default}]: " input
+        
+        # Only use default if input is completely empty
+        if [ -z "$input" ]; then
+            choice="$default"
+        else
+            choice="$input"
+        fi
+        
+        # Validate numeric input within range
+        if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le "$option_count" ]; then
+            valid=true
+        else
+            echo -e "${YELLOW}Invalid choice. Please enter a number between 1 and $option_count.${NC}"
+        fi
+    done
+    
+    # Set both variables in the calling environment
+    eval "$var_name=\"$choice\""
+    
+    # Get the corresponding value
+    local value=$(echo "$options" | sed -n "${choice}p" | awk '{print $NF}' | tr -d '()')
+    eval "$result_var=\"$value\""
+    
+    echo -e "${GREEN}Selected: ${NC}$value"
 }
 
 echo -e "${CYAN}Let's configure your NixOS system!${NC}"
@@ -170,80 +230,29 @@ if [ -n "$timezone" ] && ! find /usr/share/zoneinfo -type f -name "*" | grep -q 
     timezone="Asia/Colombo"
 fi
 
-# Machine type selection with explicit prompt
-echo "Select machine type:"
-echo "1) Laptop"
-echo "2) Desktop"
-echo "3) Virtual Machine"
-machine_choice=""
-while [[ ! "$machine_choice" =~ ^[1-3]$ ]]; do
-    read -p "Enter choice (1-3) [1]: " input
-    machine_choice="${input:-1}"
-    
-    if [[ ! "$machine_choice" =~ ^[1-3]$ ]]; then
-        echo -e "${YELLOW}Invalid choice. Please enter 1, 2, or 3.${NC}"
-    fi
-done
+# Machine type menu selection
+machine_options="1) Laptop (laptop)
+2) Desktop (desktop)
+3) Virtual Machine (vm)"
+select_from_menu "Select machine type:" "$machine_options" "machine_choice" "1" "machine_type"
 
-case $machine_choice in
-    1) machine_type="laptop" ;;
-    2) machine_type="desktop" ;;
-    3) machine_type="vm" ;;
-esac
-echo -e "${GREEN}Selected: ${NC}$machine_type"
+# Get display resolution with validation
+get_user_input "Enter display resolution (WxH)" "1920x1080" "resolution" "^[0-9]+x[0-9]+$" "Invalid format. Please use format like '1920x1080'."
 
-# Display settings with validation
-resolution=""
-while [[ ! "$resolution" =~ ^[0-9]+x[0-9]+$ ]]; do
-    read -p "Enter display resolution (WxH) [1920x1080]: " input
-    resolution="${input:-1920x1080}"
-    
-    if [[ ! "$resolution" =~ ^[0-9]+x[0-9]+$ ]]; then
-        echo -e "${YELLOW}Invalid format. Please use format like '1920x1080'.${NC}"
-    fi
-done
-width=$(echo $resolution | cut -d'x' -f1)
-height=$(echo $resolution | cut -d'x' -f2)
+# Parse width and height from resolution
+width=$(echo "$resolution" | cut -d'x' -f1)
+height=$(echo "$resolution" | cut -d'x' -f2)
 
-refresh_rate=""
-while [[ ! "$refresh_rate" =~ ^[0-9]+$ ]]; do
-    read -p "Enter refresh rate [144]: " input
-    refresh_rate="${input:-144}"
-    
-    if [[ ! "$refresh_rate" =~ ^[0-9]+$ ]]; then
-        echo -e "${YELLOW}Invalid refresh rate. Please enter a number.${NC}"
-    fi
-done
+# Get refresh rate with validation
+get_user_input "Enter refresh rate" "144" "refresh_rate" "^[0-9]+$" "Invalid refresh rate. Please enter a number."
 
-# Theme settings with explicit prompt
-echo "Select theme variant:"
-echo "1) Gruvbox Dark"
-echo "2) Gruvbox Light"
-theme_choice=""
-while [[ ! "$theme_choice" =~ ^[1-2]$ ]]; do
-    read -p "Enter choice (1-2) [1]: " input
-    theme_choice="${input:-1}"
-    
-    if [[ ! "$theme_choice" =~ ^[1-2]$ ]]; then
-        echo -e "${YELLOW}Invalid choice. Please enter 1 or 2.${NC}"
-    fi
-done
+# Theme selection
+theme_options="1) Gruvbox Dark (gruvbox-dark)
+2) Gruvbox Light (gruvbox-light)"
+select_from_menu "Select theme variant:" "$theme_options" "theme_choice" "1" "theme_variant"
 
-case $theme_choice in
-    1) theme_variant="gruvbox-dark" ;;
-    2) theme_variant="gruvbox-light" ;;
-esac
-echo -e "${GREEN}Selected: ${NC}$theme_variant"
-
-font_size=""
-while [[ ! "$font_size" =~ ^[0-9]+$ ]]; do
-    read -p "Enter font size [12]: " input
-    font_size="${input:-12}"
-    
-    if [[ ! "$font_size" =~ ^[0-9]+$ ]]; then
-        echo -e "${YELLOW}Invalid font size. Please enter a number.${NC}"
-    fi
-done
+# Get font size with validation
+get_user_input "Enter font size" "12" "font_size" "^[0-9]+$" "Invalid font size. Please enter a number."
 
 # Get NixOS version with validation
 NIXOS_VERSION=$(nixos-version | cut -d'.' -f1,2 || echo "24.05")
@@ -261,10 +270,16 @@ echo -e "  Theme: ${GREEN}$theme_variant${NC} (Font size: ${GREEN}${font_size}pt
 echo -e "  NixOS Version: ${GREEN}$nixos_version${NC}"
 echo
 
-confirm=""
-while [[ ! "$confirm" =~ ^[YyNn]$ ]]; do
-    read -p "Proceed with these settings? (Y/n): " input
-    confirm="${input:-Y}"
+# Confirm settings
+while true; do
+    read -p "Proceed with these settings? (Y/n): " confirm
+    confirm="${confirm:-Y}"
+    
+    if [[ "$confirm" =~ ^[YyNn]$ ]]; then
+        break
+    else
+        echo -e "${YELLOW}Please answer Y or N.${NC}"
+    fi
 done
 
 if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
