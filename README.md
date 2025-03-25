@@ -219,7 +219,7 @@ This repository contains a modular NixOS configuration using flakes and Home Man
 ## Keyboard Shortcuts and Aliases
 
 ### Sway Window Manager Keybindings
------------------------------------------------------------------------------------
+
 | Keybinding                   | Action                                           |
 |------------------------------|--------------------------------------------------|
 | Mod+Shift+C                  | Reload Sway configuration                        |
@@ -237,10 +237,10 @@ This repository contains a modular NixOS configuration using flakes and Home Man
 | Print                        | Take screenshot (saved to ~/Pictures)            |
 | Mod+Print                    | Take screenshot of active window                 |
 | Mod+Shift+Print              | Take screenshot of selected area                 |
------------------------------------------------------------------------------------
+
 
 ### ZSH Aliases and Shortcuts
------------------------------------------------------------------------------------------------------------------
+
 | Alias/Shortcut | Command/Action                                                                               |
 |----------------|----------------------------------------------------------------------------------------------|
 | ll             | `ls -la` (List all files in long format)                                                     |
@@ -262,7 +262,7 @@ This repository contains a modular NixOS configuration using flakes and Home Man
 | gp             | `git push`                                                                                   |
 | gl             | `git pull`                                                                                   |
 | gsb            | `git status -sb` (Compact git status)                                                        |
------------------------------------------------------------------------------------------------------------------
+
 
 ## Directory Structure
 
