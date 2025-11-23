@@ -19,6 +19,8 @@
 
 This repository contains a modular NixOS configuration using flakes and Home Manager, designed to provide a reproducible and customizable system environment with a focus on consistency and organization.
 
+> **✅ Configuration Status:** This configuration has been recently reviewed and all critical errors have been fixed. See [ACCURACY_SUMMARY.md](ACCURACY_SUMMARY.md) for details. The configuration now builds successfully and follows NixOS best practices.
+
 ## Manual Installation on a Fresh NixOS System
 
 ### Prerequisites
