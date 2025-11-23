@@ -2,7 +2,12 @@
   config, 
   pkgs, 
   ... 
-}: { 
+}: 
+
+let
+  variables = import ./../../variables.nix;
+in
+{ 
   # System-level configurations 
   imports = [ 
     ./../../hosts/default.nix 
@@ -21,12 +26,12 @@
 
   # Enable services 
   services.openssh.enable = true; 
-  services.networking.firewall.enable = true; 
+  services.firewall.enable = true; 
 
   # Additional system configurations 
-  networking.hostName = "nixos"; 
-  time.timeZone = "UTC"; 
-  users.users.yourusername = { 
+  networking.hostName = variables.hostname or "nixos"; 
+  time.timeZone = variables.timezone or "UTC"; 
+  users.users.${variables.username or "nixos"} = { 
     isNormalUser = true; 
     extraGroups = [ "wheel" "networkmanager" ]; 
   }; 

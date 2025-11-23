@@ -9,13 +9,15 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     
-    # Add thorium-browser input - point to local path
-    thorium-browser.url = "../thorium-browser";
-    # Uncomment when pushing to a remote repository:
+    # Add thorium-browser input when ready
+    # NOTE: The thorium-browser directory does not exist yet.
+    # Uncomment when the thorium-browser flake is available:
+    # thorium-browser.url = "path:../thorium-browser";
+    # Or from a remote repository:
     # thorium-browser.url = "github:yourusername/thorium-browser-nix";
   };
   
-  outputs = { self, nixpkgs, home-manager, thorium-browser, ... }:
+  outputs = { self, nixpkgs, home-manager, ... }@inputs:
     let
       system = "x86_64-linux";
       variables = import ./variables.nix;
@@ -30,12 +32,12 @@
       pkgs = import nixpkgs {
         inherit system;
         config = pkgsConfig;
-        # Add Thorium browser overlay
-        overlays = [
-          (final: prev: {
-            thorium-browser = thorium-browser.packages.${system}.default;
-          })
-        ];
+        # Add overlays when thorium-browser is available
+        # overlays = [
+        #   (final: prev: {
+        #     thorium-browser = thorium-browser.packages.${system}.default;
+        #   })
+        # ];
       };
       
       # Helper function to create machine-specific configurations
@@ -44,7 +46,8 @@
         specialArgs = { 
           inherit machineType; 
           inherit variables;
-          inherit thorium-browser;
+          # thorium-browser will be available when uncommented in inputs
+          # inherit thorium-browser;
         };
         modules = [
           ./hosts/default.nix
@@ -54,17 +57,18 @@
            else if machineType == "vm" then ./hosts/machine-specific/vm.nix
            else ./hosts/machine-specific/laptop.nix)
           ./modules/default.nix
-          ./modules/system/default.nix
-          ./modules/browsers/thorium.nix  # Add the dedicated Thorium module
+          # Uncomment when thorium-browser is available:
+          # ./modules/browsers/thorium.nix
           
           # Add global nixpkgs configuration
           {
             nixpkgs.config = pkgsConfig;
-            nixpkgs.overlays = [ 
-              (final: prev: {
-                thorium-browser = thorium-browser.packages.${system}.default;
-              })
-            ];
+            # Uncomment overlays when thorium-browser is available:
+            # nixpkgs.overlays = [ 
+            #   (final: prev: {
+            #     thorium-browser = thorium-browser.packages.${system}.default;
+            #   })
+            # ];
           }
         ];
       };
@@ -80,7 +84,8 @@
         inherit pkgs;
         extraSpecialArgs = { 
           inherit variables; 
-          inherit thorium-browser;
+          # thorium-browser will be available when uncommented in inputs
+          # inherit thorium-browser;
         };
         modules = [
           ./home-manager/default.nix
@@ -92,17 +97,19 @@
           ./home-manager/programs/alacritty/default.nix
           ./home-manager/programs/zsh/default.nix
           ./home-manager/programs/thunar/default.nix
-          ./home-manager/programs/thorium/default.nix  # Add the Thorium specific configuration
+          # Uncomment when thorium-browser is available:
+          # ./home-manager/programs/thorium/default.nix
           ./home-manager/themes/default.nix
           
           # Add global nixpkgs configuration for home-manager
           {
             nixpkgs.config = pkgsConfig;
-            nixpkgs.overlays = [ 
-              (final: prev: {
-                thorium-browser = thorium-browser.packages.${system}.default;
-              })
-            ];
+            # Uncomment overlays when thorium-browser is available:
+            # nixpkgs.overlays = [ 
+            #   (final: prev: {
+            #     thorium-browser = thorium-browser.packages.${system}.default;
+            #   })
+            # ];
           }
         ];
       };

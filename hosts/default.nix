@@ -51,7 +51,7 @@ in
   networking.networkmanager.enable = true; 
 
   # Time settings
-  time.timeZone = "UTC"; 
+  time.timeZone = variables.timezone or "UTC"; 
 
   # Enable some basic services
   services.openssh.enable = true; 
@@ -70,13 +70,4 @@ in
     vim 
     git 
   ]; 
-
-  # Enable NixOS services
-  systemd.services.exampleService = { 
-    description = "Example Service"; 
-    wantedBy = [ "multi-user.target" ]; 
-    serviceConfig = { 
-      ExecStart = "${pkgs.examplePackage}/bin/example"; 
-    }; 
-  }; 
 }

@@ -29,8 +29,8 @@ in
     "xfce.thunar-volman",
     "xfce.tumbler",
     "ffmpegthumbnailer",
-    "gvfs",
-    "thorium-browser" # Add Thorium Browser
+    "gvfs"
+    # "thorium-browser" # Commented out - not available yet
   ],
   "swayConfig": {
     "modKey": "Mod4",

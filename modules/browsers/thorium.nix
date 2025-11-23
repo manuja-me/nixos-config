@@ -1,18 +1,21 @@
-{ config, pkgs, lib, thorium-browser, variables, ... }:
+{ config, pkgs, lib, variables, ... }:
 
 with lib;
 
 let
   cfg = config.programs.thorium-browser;
   thoriumConfig = variables.thorium or {};
+  # Fallback to firefox if thorium-browser is not available
+  hasThorium = false; # Set to true when thorium-browser input is available
 in {
   options.programs.thorium-browser = {
     enable = mkEnableOption "Thorium Browser";
     
     package = mkOption {
       type = types.package;
-      default = thorium-browser.packages.${pkgs.system}.default;
-      description = "The Thorium browser package to use";
+      # Use firefox as fallback since thorium-browser is not available yet
+      default = pkgs.firefox;
+      description = "The Thorium browser package to use (fallback to firefox)";
     };
     
     defaultBrowser = mkOption {
@@ -41,6 +44,10 @@ in {
   };
 
   config = mkIf cfg.enable {
+    warnings = mkIf (!hasThorium) [
+      "thorium-browser is not available, using firefox as fallback browser"
+    ];
+    
     environment.systemPackages = [ cfg.package ];
     
     # Set up environment variables for better wayland support
@@ -52,34 +59,9 @@ in {
       GOOGLE_DEFAULT_CLIENT_SECRET = mkIf cfg.enableWideVine "OTJgUOQcT7lO7GsGZq2G4IlT";
     };
     
-    # Install a wrapper script to launch Thorium with custom flags
-    environment.systemPackages = [
-      (pkgs.writeShellScriptBin "thorium-browser-launcher" ''
-        exec ${cfg.package}/bin/thorium-browser ${concatStringsSep " " cfg.commandLineArgs} "$@"
-      '')
-    ];
-
     # If defaultBrowser is true, set up systemwide default browser settings
     environment.sessionVariables = mkIf cfg.defaultBrowser {
-      BROWSER = "thorium-browser";
+      BROWSER = if hasThorium then "thorium-browser" else "firefox";
     };
-    
-    # Create XDG desktop entry with appropriate flags
-    environment.systemPackages = [
-      (pkgs.makeDesktopItem {
-        name = "thorium-browser-custom";
-        desktopName = "Thorium Browser";
-        exec = "thorium-browser-launcher %U";
-        icon = "thorium-browser";
-        categories = ["Network" "WebBrowser"];
-        mimeTypes = [
-          "text/html"
-          "application/xhtml+xml"
-          "x-scheme-handler/http"
-          "x-scheme-handler/https"
-        ];
-        genericName = "Web Browser";
-      })
-    ];
   };
 }
