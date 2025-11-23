@@ -11,7 +11,7 @@
     # Wayland environment (lightweight)
     xwayland
     wofi
-    waybar-minimal
+    waybar  # waybar-minimal doesn't exist, using waybar
     swaylock
     wl-clipboard
     
@@ -49,21 +49,23 @@
   };
 
   # Sway specific configurations (optimized for VM)
-  services.sway = {
-    enable = true;
-    wrapperFeatures.gtk = true;
-    extraPackages = with pkgs; [
-      xwayland
-      wofi
-      waybar-minimal
-      swaylock
-      wl-clipboard
-      alacritty
-    ];
-    config = {
-      xwayland = true;
-    };
-  };
+  # Note: programs.sway is already configured in hosts/configuration.nix
+  # Commenting out to avoid conflicts
+  # services.sway = {
+  #   enable = true;
+  #   wrapperFeatures.gtk = true;
+  #   extraPackages = with pkgs; [
+  #     xwayland
+  #     wofi
+  #     waybar-minimal
+  #     swaylock
+  #     wl-clipboard
+  #     alacritty
+  #   ];
+  #   config = {
+  #     xwayland = true;
+  #   };
+  # };
 
   # Enable XWayland support
   programs.xwayland.enable = true;
@@ -79,7 +81,7 @@
   };
 
   # Fonts (minimal set for VM)
-  fonts.fonts = with pkgs; [
+  fonts.packages = with pkgs; [
     noto-fonts
     liberation_ttf
     fira-code

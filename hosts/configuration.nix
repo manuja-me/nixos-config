@@ -23,7 +23,7 @@ in
   networking.networkmanager.enable = true; 
 
   # Time settings 
-  time.timeZone = "America/New_York"; 
+  time.timeZone = variables.timezone or "America/New_York"; 
 
   # Package management 
   environment.systemPackages = with pkgs; [ 
@@ -107,7 +107,7 @@ in
   ];
 
   # System fonts
-  fonts.fonts = with pkgs; [
+  fonts.packages = with pkgs; [
     (nerdfonts.override { fonts = [ "JetBrainsMono" ]; })
     noto-fonts
     noto-fonts-emoji

@@ -39,7 +39,7 @@
   powerManagement.laptop.enable = true;
 
   # Fonts for better appearance
-  fonts.fonts = with pkgs; [
+  fonts.packages = with pkgs; [
     noto-fonts
     noto-fonts-cjk
     noto-fonts-emoji

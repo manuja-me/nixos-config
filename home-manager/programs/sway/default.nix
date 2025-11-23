@@ -105,7 +105,8 @@
       
       # Startup applications
       exec mako
-      exec_always ${pkgs.autotiling}/bin/autotiling
+      # Uncomment if autotiling is available:
+      # exec_always ${pkgs.autotiling}/bin/autotiling
     '';
   };
 }

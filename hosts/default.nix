@@ -55,8 +55,8 @@ in
 
   # Enable some basic services
   services.openssh.enable = true; 
-  services.firewall.enable = true; 
-  services.firewall.allowedTCPPorts = [ 22 ]; 
+  networking.firewall.enable = true; 
+  networking.firewall.allowedTCPPorts = [ 22 ]; 
 
   # Users
   users.users.${variables.username} = { # Using the username from variables
