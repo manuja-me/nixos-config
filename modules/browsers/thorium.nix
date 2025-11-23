@@ -5,8 +5,10 @@ with lib;
 let
   cfg = config.programs.thorium-browser;
   thoriumConfig = variables.thorium or {};
-  # Fallback to firefox if thorium-browser is not available
-  hasThorium = false; # Set to true when thorium-browser input is available
+  # Indicates whether thorium-browser input is available in flake.nix
+  # Set to true when you uncomment thorium-browser in flake.nix inputs
+  # and update the package default below to use thorium-browser.packages
+  hasThorium = false;
 in {
   options.programs.thorium-browser = {
     enable = mkEnableOption "Thorium Browser";

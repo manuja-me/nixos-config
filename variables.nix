@@ -30,7 +30,12 @@ in
     "xfce.tumbler",
     "ffmpegthumbnailer",
     "gvfs"
-    # "thorium-browser" # Commented out - not available yet
+    # NOTE: thorium-browser is not available yet
+    # To enable:
+    # 1. Create or obtain the thorium-browser flake
+    # 2. Uncomment thorium-browser input in flake.nix
+    # 3. Uncomment this package and related configurations
+    # "thorium-browser"
   ],
   "swayConfig": {
     "modKey": "Mod4",

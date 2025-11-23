@@ -43,7 +43,8 @@
         "${modifier}+Shift+s" = "exec grim -g \"$(slurp)\" - | wl-copy";
         "${modifier}+Shift+f" = "exec ${variables.swayConfig.fileManagers.gui or "thunar"}";
         "${modifier}+e" = "exec ${terminal} -e ${variables.swayConfig.fileManagers.terminal or "yazi"}";
-        "${modifier}+Shift+w" = "exec thorium-browser";
+        # Use firefox as browser until thorium-browser is available
+        "${modifier}+Shift+w" = "exec firefox";
       };
       
       # Floating windows criteria
