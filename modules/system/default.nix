@@ -1,16 +1,18 @@
 { 
   config, 
   pkgs, 
+  lib,
   ... 
-}: { 
-  # System-level configurations 
-  imports = [ 
-    ./../../hosts/default.nix 
-    ./../../hosts/configuration.nix 
-    ./../../home-manager/default.nix 
-    ./../../modules/default.nix 
-  ]; 
+}: 
 
+let
+  variables = import ./../../variables.nix;
+in
+{ 
+  # System-level module configurations
+  # Note: This module provides additional system-level options
+  # It should NOT import the main configuration files to avoid circular dependencies
+  
   # Define system packages 
   environment.systemPackages = with pkgs; [ 
     # Add your desired packages here 
@@ -21,12 +23,12 @@
 
   # Enable services 
   services.openssh.enable = true; 
-  services.networking.firewall.enable = true; 
+  networking.firewall.enable = true; 
 
   # Additional system configurations 
-  networking.hostName = "nixos"; 
-  time.timeZone = "UTC"; 
-  users.users.yourusername = { 
+  networking.hostName = lib.mkDefault (variables.hostname or "nixos"); 
+  time.timeZone = lib.mkDefault (variables.timezone or "UTC"); 
+  users.users.${variables.username or "nixos"} = { 
     isNormalUser = true; 
     extraGroups = [ "wheel" "networkmanager" ]; 
   }; 

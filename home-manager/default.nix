@@ -1,34 +1,3 @@
-{
-  inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-  inputs.home-manager.url = "github:nix-community/home-manager";
-  
-  outputs = { self, nixpkgs, home-manager }: {
-    nixosConfigurations = {
-      default = nixpkgs.lib.nixosSystem {
-        system = "x86_64-linux";
-        modules = [
-          ./hosts/default.nix
-          ./hosts/configuration.nix
-          ./hosts/machine-specific/laptop.nix
-        ];
-      };
-    };
-
-    homeConfigurations = {
-      user = home-manager.lib.homeManagerConfiguration {
-        pkgs = nixpkgs.legacyPackages.x86_64-linux;
-        modules = [
-          ./home-manager/default.nix
-          ./home-manager/programs/default.nix
-          ./home-manager/programs/neovim/default.nix
-          ./home-manager/programs/waybar/default.nix
-          ./home-manager/themes/default.nix
-        ];
-      };
-    };
-  };
-}
-
 { config, pkgs, variables, ... }:
 
 {

@@ -87,26 +87,28 @@
   };
 
   # Sway specific configurations
-  services.sway = {
-    enable = true;
-    wrapperFeatures.gtk = true;
-    extraPackages = with pkgs; [
-      xwayland
-      wofi
-      waybar
-      swaylock
-      swayidle
-      wl-clipboard
-      grim
-      slurp
-      mako
-      swaybg
-      alacritty
-    ];
-    config = {
-      xwayland = true;
-    };
-  };
+  # Note: programs.sway is already configured in hosts/configuration.nix
+  # Commenting out to avoid conflicts
+  # services.sway = {
+  #   enable = true;
+  #   wrapperFeatures.gtk = true;
+  #   extraPackages = with pkgs; [
+  #     xwayland
+  #     wofi
+  #     waybar
+  #     swaylock
+  #     swayidle
+  #     wl-clipboard
+  #     grim
+  #     slurp
+  #     mako
+  #     swaybg
+  #     alacritty
+  #   ];
+  #   config = {
+  #     xwayland = true;
+  #   };
+  # };
 
   # Enable XWayland support
   programs.xwayland.enable = true;
@@ -131,7 +133,7 @@
   };
 
   # Fonts for better appearance
-  fonts.fonts = with pkgs; [
+  fonts.packages = with pkgs; [
     noto-fonts
     noto-fonts-cjk
     noto-fonts-emoji

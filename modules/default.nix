@@ -1,11 +1,15 @@
+{ config, pkgs, lib, ... }:
+
 {
-  "imports": [
+  imports = [
     ./system/default.nix
-  ],
-  "options": {
+  ];
+
+  options = {
     # Define any additional options for your NixOS modules here
-  },
-  "config": {
+  };
+
+  config = {
     # Define any additional configuration for your NixOS modules here
-  }
+  };
 }

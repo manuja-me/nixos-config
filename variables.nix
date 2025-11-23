@@ -29,8 +29,13 @@ in
     "xfce.thunar-volman",
     "xfce.tumbler",
     "ffmpegthumbnailer",
-    "gvfs",
-    "thorium-browser" # Add Thorium Browser
+    "gvfs"
+    # NOTE: thorium-browser is not available yet
+    # To enable:
+    # 1. Create or obtain the thorium-browser flake
+    # 2. Uncomment thorium-browser input in flake.nix
+    # 3. Uncomment this package and related configurations
+    # "thorium-browser"
   ],
   "swayConfig": {
     "modKey": "Mod4",

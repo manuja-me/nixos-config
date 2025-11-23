@@ -23,7 +23,7 @@ in
   networking.networkmanager.enable = true; 
 
   # Time settings 
-  time.timeZone = "America/New_York"; 
+  time.timeZone = variables.timezone or "America/New_York"; 
 
   # Package management 
   environment.systemPackages = with pkgs; [ 
@@ -107,7 +107,7 @@ in
   ];
 
   # System fonts
-  fonts.fonts = with pkgs; [
+  fonts.packages = with pkgs; [
     (nerdfonts.override { fonts = [ "JetBrainsMono" ]; })
     noto-fonts
     noto-fonts-emoji
@@ -161,30 +161,26 @@ in
   services.upower.enable = true;
   powerManagement.enable = true;
 
-  # Enable Thorium browser
-  programs.thorium-browser = {
-    enable = true;
-    defaultBrowser = variables.thorium.defaultBrowser or true;
-    commandLineArgs = variables.thorium.commandLineArgs or [
-      "--enable-features=UseOzonePlatform"
-      "--ozone-platform=wayland"
-      "--enable-gpu-rasterization"
-      "--enable-zero-copy"
-    ];
-    enableWideVine = variables.thorium.enableWideVine or false;
-  };
+  # Enable Thorium browser (when available)
+  # NOTE: thorium-browser is not currently available in the flake inputs
+  # Uncomment when thorium-browser flake is added:
+  # programs.thorium-browser = {
+  #   enable = true;
+  #   defaultBrowser = variables.thorium.defaultBrowser or true;
+  #   commandLineArgs = variables.thorium.commandLineArgs or [
+  #     "--enable-features=UseOzonePlatform"
+  #     "--ozone-platform=wayland"
+  #     "--enable-gpu-rasterization"
+  #     "--enable-zero-copy"
+  #   ];
+  #   enableWideVine = variables.thorium.enableWideVine or false;
+  # };
 
   # Wayland support for Thorium and other browsers
   environment.sessionVariables.NIXOS_OZONE_WL = "1";
 
   # System options 
   system.stateVersion = "22.05"; 
-
-  # Add the thorium-browser overlay
-  nixpkgs.overlays = [
-    inputs.thorium-browser.overlays.default
-    // ...existing overlays...
-  ];
 
   # Boot configuration using GRUB
   boot = {

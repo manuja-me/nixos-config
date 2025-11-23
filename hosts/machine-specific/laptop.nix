@@ -1,3 +1,5 @@
+{ config, pkgs, lib, ... }:
+
 {
   environment.systemPackages = with pkgs; [
     # List of packages specific to the laptop
@@ -14,6 +16,8 @@
     slurp
     mako
     swaybg
+    alacritty # terminal
+    dmenu # application launcher
     # Add more packages as needed
   ];
 
@@ -24,29 +28,8 @@
   services.xserver.enable = true;
   services.xserver.displayManager.startx.enable = true;
 
-  # Sway specific configurations
-  services.sway = {
-    enable = true;
-    wrapperFeatures.gtk = true; # So that GTK applications use the GTK theme, cursor, etc.
-    extraPackages = with pkgs; [
-      xwayland
-      wofi
-      waybar
-      swaylock
-      swayidle
-      wl-clipboard
-      grim
-      slurp
-      mako
-      swaybg
-      alacritty # terminal
-      dmenu # application launcher
-    ];
-    config = {
-      # Add Sway specific configurations here
-      xwayland = true;
-    };
-  };
+  # Note: programs.sway is already configured in hosts/configuration.nix
+  # This avoids conflicts between services.sway and programs.sway
 
   # Enable XWayland support
   programs.xwayland.enable = true;
@@ -56,7 +39,7 @@
   powerManagement.laptop.enable = true;
 
   # Fonts for better appearance
-  fonts.fonts = with pkgs; [
+  fonts.packages = with pkgs; [
     noto-fonts
     noto-fonts-cjk
     noto-fonts-emoji

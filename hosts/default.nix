@@ -51,12 +51,12 @@ in
   networking.networkmanager.enable = true; 
 
   # Time settings
-  time.timeZone = "UTC"; 
+  time.timeZone = variables.timezone or "UTC"; 
 
   # Enable some basic services
   services.openssh.enable = true; 
-  services.firewall.enable = true; 
-  services.firewall.allowedTCPPorts = [ 22 ]; 
+  networking.firewall.enable = true; 
+  networking.firewall.allowedTCPPorts = [ 22 ]; 
 
   # Users
   users.users.${variables.username} = { # Using the username from variables
@@ -70,13 +70,4 @@ in
     vim 
     git 
   ]; 
-
-  # Enable NixOS services
-  systemd.services.exampleService = { 
-    description = "Example Service"; 
-    wantedBy = [ "multi-user.target" ]; 
-    serviceConfig = { 
-      ExecStart = "${pkgs.examplePackage}/bin/example"; 
-    }; 
-  }; 
 }
